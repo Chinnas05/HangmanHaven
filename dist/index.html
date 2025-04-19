@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hangman Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+        .game-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 20px 0;
+        }
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        #message {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Hangman Game</h1>
+        
+        <div>
+            <label>Category:</label>
+            <select id="category">
+                {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                {% endfor %}
+            </select>
+            
+            <label>Difficulty:</label>
+            <select id="difficulty">
+                {% for difficulty in difficulties %}
+                    <option value="{{ difficulty }}">{{ difficulty }}</option>
+                {% endfor %}
+            </select>
+            
+            <button class="button" onclick="startGame()">Start Game</button>
+        </div>
+
+        <canvas id="hangmanCanvas" width="200" height="250"></canvas>
+        
+        <div id="wordDisplay"></div>
+        <div id="usedLetters"></div>
+        <div id="message"></div>
+        
+        <div>
+            <input type="text" id="guessInput" maxlength="1" size="5">
+            <button class="button" onclick="makeGuess()">Guess</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('hangmanCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function drawHangman(stage) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (stage >= 1) ctx.fillRect(20, 230, 160, 10);  // Base
+            if (stage >= 2) ctx.fillRect(100, 50, 10, 180);  // Pole
+            if (stage >= 3) ctx.fillRect(100, 50, 50, 10);   // Top
+            if (stage >= 4) ctx.fillRect(145, 50, 10, 20);   // Rope
+            if (stage >= 5) ctx.arc(150, 90, 20, 0, Math.PI * 2); ctx.fill();  // Head
+            if (stage >= 6) ctx.fillRect(145, 110, 10, 50);  // Body
+            if (stage >= 7) ctx.fillRect(130, 120, 15, 5);   // Left Arm
+            if (stage >= 8) ctx.fillRect(155, 120, 15, 5);   // Right Arm
+            if (stage >= 9) ctx.fillRect(130, 160, 15, 5);   // Left Leg
+            if (stage >= 10) ctx.fillRect(155, 160, 15, 5);  // Right Leg
+        }
+
+        function startGame() {
+            fetch('/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `category=${document.getElementById('category').value}&difficulty=${document.getElementById('difficulty').value}`
+            })
+            .then(response => response.json())
+            .then(data => updateGame(data));
+        }
+
+        function makeGuess() {
+            const guess = document.getElementById('guessInput').value;
+            fetch('/guess', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `guess=${guess}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('guessInput').value = '';
+                updateGame(data);
+            });
+        }
+
+        function updateGame(data) {
+            document.getElementById('wordDisplay').textContent = data.word_display;
+            document.getElementById('usedLetters').textContent = 'Used Letters: ' + data.used_letters;
+            document.getElementById('message').textContent = data.message;
+            drawHangman(data.hangman_stage || 0);
+        }
+
+        document.getElementById('guessInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') makeGuess();
+        });
+    </script>
+</body>
+</html>
